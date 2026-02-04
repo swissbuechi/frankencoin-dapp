@@ -10,6 +10,7 @@ import { useRouter as useNavigation } from "next/navigation";
 import Button from "@components/Button";
 import { useAccount } from "wagmi";
 import AppBox from "@components/AppBox";
+import { TxUrl } from "@utils";
 
 interface Props {
 	headers: string[];
@@ -27,6 +28,7 @@ export default function MyPositionsBidsRow({ headers, tab, bid }: Props) {
 	const position = positions.map[pid];
 	const challenge = challenges.map[cid];
 	const url = useContractUrl(position.collateral || zeroAddress);
+	const urlBid = TxUrl(bid.txHash);
 	const account = useAccount();
 	const navigate = useNavigation();
 	if (!position || !challenge) return null;
@@ -34,6 +36,11 @@ export default function MyPositionsBidsRow({ headers, tab, bid }: Props) {
 	const openExplorer = (e: any) => {
 		e.preventDefault();
 		window.open(url, "_blank");
+	};
+
+	const openExplorerBid = (e: any) => {
+		e.preventDefault();
+		window.open(urlBid, "_blank");
 	};
 
 	const isDisabled: boolean = challenge.status !== "Active" || account.address !== bid.bidder;
@@ -45,7 +52,9 @@ export default function MyPositionsBidsRow({ headers, tab, bid }: Props) {
 			tab={tab}
 			actionCol={
 				isDisabled ? (
-					<></>
+					<Button className="h-10" onClick={openExplorerBid}>
+						View
+					</Button>
 				) : (
 					<div className="">
 						<Button

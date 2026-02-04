@@ -6,9 +6,10 @@ import AppLink from "@components/AppLink";
 import { SupportedChain } from "@frankencoin/zchf";
 import { useSelector } from "react-redux";
 import { RootState } from "../../redux/redux.store";
-import { SavingsBalance } from "@frankencoin/api";
+import { SavingsBalance, SavingsBalanceChainIdMapping } from "@frankencoin/api";
 
 interface Props {
+	account: Address;
 	chain: SupportedChain;
 	balance: bigint;
 	change: bigint;
@@ -21,6 +22,7 @@ interface Props {
 }
 
 export default function SavingsDetailsCard({
+	account,
 	chain,
 	balance,
 	change,
@@ -33,11 +35,14 @@ export default function SavingsDetailsCard({
 }: Props) {
 	const { savingsBalance } = useSelector((state: RootState) => state.savings);
 
-	const balances = Object.values(savingsBalance)[0];
-	const entries = Object.values(balances)
-		.map((m) => Object.values(m))
-		.flat()
-		.filter((m) => BigInt(m.balance) > 0n);
+	let entries: SavingsBalance[] = [];
+
+	if (account != zeroAddress) {
+		entries = Object.values(savingsBalance)
+			.map((m) => Object.values(m))
+			.flat()
+			.filter((m) => BigInt(m.balance) > 0n);
+	}
 
 	const activeBalance = entries.filter((i) => i.chainId == chain.id);
 	const inactiveBalance = entries.filter((i) => i.chainId != chain.id);

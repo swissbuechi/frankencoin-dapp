@@ -22,6 +22,10 @@ import AppLink from "@components/AppLink";
 import { useRouter as useNavigation } from "next/navigation";
 import { mainnet } from "viem/chains";
 import GuardSupportedChain from "@components/Guards/GuardSupportedChain";
+import { useRouter } from "next/router";
+import { useSelector } from "react-redux";
+import { RootState } from "../../redux/redux.store";
+import { PositionQueryV2 } from "@frankencoin/api";
 
 export default function PositionCreate({}) {
 	const [minCollAmount, setMinCollAmount] = useState(0n);
@@ -45,6 +49,7 @@ export default function PositionCreate({}) {
 	const [bufferError, setBufferError] = useState("");
 	const [durationError, setDurationError] = useState("");
 	const [isConfirming, setIsConfirming] = useState("");
+	const [isInit, setIsInit] = useState(false);
 
 	const [userAllowance, setUserAllowance] = useState<bigint>(0n);
 	const { data } = useBlockNumber({ watch: true });
@@ -54,6 +59,34 @@ export default function PositionCreate({}) {
 	const chainId = mainnet.id;
 	const collTokenData = useTokenData(collateralAddress);
 	const userBalance = useUserBalance();
+	const router = useRouter();
+	const queryAddress: Address = String(router.query.source).toLowerCase() as Address;
+	const { list } = useSelector((state: RootState) => state.positions.list);
+
+	useEffect(() => {
+		if (isInit) return;
+		else setIsInit(true);
+
+		if (isAddress(queryAddress)) {
+			const getPosition = list.find((i) => i.position.toLowerCase() == queryAddress) as PositionQueryV2;
+			if (getPosition == null) return;
+
+			// Collateral
+			setCollateralAddress(getPosition.collateral);
+			setMinCollAmount(BigInt(getPosition.minimumCollateral));
+			setInitialCollAmount(BigInt(getPosition.minimumCollateral));
+
+			// Financial Terms
+			setLimitAmount(BigInt(getPosition.limitForClones));
+			setInterest(BigInt(getPosition.riskPremiumPPM));
+			// skipping maturity, default: 12M
+
+			// Liquidation
+			setLiqPrice(BigInt(getPosition.price));
+			setBuffer(BigInt(getPosition.reserveContribution));
+			setAuctionDuration(BigInt(getPosition.challengePeriod) / 3600n);
+		}
+	}, [isInit, queryAddress, list]);
 
 	useEffect(() => {
 		const acc: Address | undefined = account.address;
@@ -93,13 +126,13 @@ export default function PositionCreate({}) {
 		}
 	}, [collateralAddress, collTokenData]);
 
-	useEffect(() => {
-		if (minCollAmount > 0n) {
-			const valueBigInt = parseUnits("5000", 36) / minCollAmount;
-			setLiqPrice(valueBigInt);
-			checkCollateralAmount(minCollAmount, valueBigInt);
-		}
-	}, [minCollAmount]);
+	// useEffect(() => {
+	// 	if (minCollAmount > 0n) {
+	// 		const valueBigInt = parseUnits("5000", 36) / minCollAmount;
+	// 		setLiqPrice(valueBigInt);
+	// 		checkCollateralAmount(minCollAmount, valueBigInt);
+	// 	}
+	// }, [minCollAmount]);
 
 	const onChangeProposalFee = (value: string) => {
 		const valueBigInt = BigInt(value);
@@ -266,6 +299,7 @@ export default function PositionCreate({}) {
 			const openWriteHash = await writeContract(WAGMI_CONFIG, {
 				address: ADDRESS[chainId].mintingHubV2,
 				chainId,
+				gas: 3000000n,
 				abi: MintingHubV2ABI,
 				functionName: "openPosition",
 				args: [

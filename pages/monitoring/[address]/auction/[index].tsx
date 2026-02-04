@@ -12,13 +12,11 @@ import { readContract, waitForTransactionReceipt, writeContract } from "wagmi/ac
 import { toast } from "react-toastify";
 import { TxToast, renderErrorTxToast } from "@components/TxToast";
 import DisplayLabel from "@components/DisplayLabel";
-import GuardToAllowedChainBtn from "@components/Guards/GuardToAllowedChainBtn";
 import { WAGMI_CHAIN, WAGMI_CONFIG } from "../../../../app.config";
 import { RootState } from "../../../../redux/redux.store";
 import { useSelector } from "react-redux";
 import { useRouter as useNavigation } from "next/navigation";
 import { ADDRESS, FrankencoinABI, MintingHubV1ABI, MintingHubV2ABI } from "@frankencoin/zchf";
-import { ChallengesId } from "@frankencoin/api";
 import DisplayOutputAlignedRight from "@components/DisplayOutputAlignedRight";
 import AppLink from "@components/AppLink";
 import { mainnet } from "viem/chains";
@@ -41,13 +39,12 @@ export default function ChallengePlaceBid() {
 	const chainId = mainnet.id;
 	const addressQuery: Address = (router.query.address as string).toLowerCase() as Address;
 	const indexQuery: string = router.query.index as string;
-	const challengeId: ChallengesId = `${addressQuery ?? zeroAddress}-challenge-${BigInt(indexQuery)}`;
 
 	const challenges = useSelector((state: RootState) => state.challenges.list.list);
-	const positions = useSelector((state: RootState) => state.positions.list.list);
+	const positions = useSelector((state: RootState) => state.positions.openPositions);
 
-	const challenge = challenges.find((c) => c.id == challengeId);
-	const position = positions.find((p) => p.position == challenge?.position);
+	const challenge = challenges.find((c) => c.position == (addressQuery ?? zeroAddress) && String(c.number) == indexQuery);
+	const position = positions.find((p) => p.position.toLowerCase() == challenge?.position);
 
 	useEffect(() => {
 		const acc: Address | undefined = account.address;
